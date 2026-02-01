@@ -1,0 +1,543 @@
+# Cell 0
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Read points and labels.
+points = np.loadtxt('points.txt')
+pointLabels = np.loadtxt('labels.txt')
+
+# Plot with different colours for each class.
+plt.figure(figsize=(8, 6))
+# Store points in np array for all labels and points.
+for label in np.unique(pointLabels):
+    # Get indices for current label.
+    indices = (pointLabels == label)
+    # Plot points using a scatter plot.
+    plt.scatter(points[indices, 0], points[indices, 1], label=f'Colour {label:.0f}', s=25)
+
+# Labelling the axes, title and legend.
+plt.xlabel('X-Axis')
+plt.ylabel('Y-Axis')
+plt.title('Scatter Plot of Points by Colour')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+# Cell 1
+from sklearn.model_selection import train_test_split
+
+# 50/50 split storing in pointTest and pointLabelsTest variables.
+pointsRemaining, pointsTest, pointLabelsRemaining, pointLabelsTest = train_test_split(
+    points, pointLabels, test_size=0.5, random_state=69
+)
+
+# Split the remaining 50% into train and validation sets; 75/25 split.
+pointsTrain, pointsVal, pointLabelsTrain, pointLabelsVal = train_test_split(
+    pointsRemaining, pointLabelsRemaining, test_size=0.25, random_state=69
+)
+
+# Verify the shapes.
+print("Training set size:", pointsTrain.shape, pointLabelsTrain.shape)
+print("Validation set size:", pointsVal.shape, pointLabelsVal.shape)
+print("Test set size:", pointsTest.shape, pointLabelsTest.shape)
+
+
+# Cell 2
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping
+
+classes_value = len(np.unique(pointLabels))  # Find class value (for pointLabels).
+
+# Creating a custom "MinimumEarlyStopping" class to callback on; doesn't check
+# early stopping until after min_epochs.
+class MinimumEpochEarlyStopping(EarlyStopping):
+    def __init__(self, min_epochs, **kwargs):  # keyword argument allows function
+        # to take an arbitrary number of keyword arguments.
+        self.min_epochs = min_epochs
+        super().__init__(**kwargs)  # Calls the parent class with all provided arguments.
+
+    def on_epoch_end(self, epoch, logs=None):
+        # Ensure early stopping is not checked until **after**
+        # the minimum number of epochs.
+        if epoch < self.min_epochs - 1:  # Epochs start from 0 therefore subtract 1 from min_epochs.
+            return  # Exit early without calling parent
+        super().on_epoch_end(epoch, logs)
+
+
+# Hyperparameter grids
+hidden_layers_options = [1, 2, 4]
+hidden_units_options = [16, 32, 64, 128]
+learning_rates = [1e-1, 1e-2, 1e-3, 1e-4]
+
+# Keep track of tested combinations and their performance.
+testedLayers = []
+testedUnits = []
+testedRates = []
+testedLosses = []
+testedAccuracies = []
+
+# Variables to store the best model and corresponding metrics.
+modelOpt = None
+lossOpt = np.inf
+accOpt = 0.0
+layersOpt = None
+unitsOpt = None
+
+# One-hot encoding is not used; we use sparse categorical crossentropy.
+
+# Grid search over hyperparameters.
+for layers in hidden_layers_options:
+    for units in hidden_units_options:
+        for lr in learning_rates:
+            print(f"\nTraining model with {layers} hidden layers, "
+                  f"{units} units, learning rate = {lr}")
+
+            # Build the model.
+            model = Sequential()
+            model.add(Dense(units, activation='relu', input_shape=(pointsTrain.shape[1],)))
+            for _ in range(layers - 1):
+                model.add(Dense(units, activation='relu'))
+            model.add(Dense(classes_value, activation='softmax'))
+
+            # Compile with Adam optimizer using current learning rate.
+            optimizer = Adam(learning_rate=lr)
+            model.compile(optimizer=optimizer,
+                          loss='sparse_categorical_crossentropy',
+                          metrics=['accuracy'])
+
+            # Early stopping with patience of 10 epochs; minimum 100 epochs.
+            early_stopping = MinimumEpochEarlyStopping(
+                min_epochs=100,
+                monitor='val_loss',
+                patience=10,
+                restore_best_weights=True
+            )
+
+            # Train the model.
+            history = model.fit(
+                pointsTrain, pointLabelsTrain,
+                validation_data=(pointsVal, pointLabelsVal),
+                epochs=300,
+                batch_size=32,
+                callbacks=[early_stopping],
+                verbose=0  # set to 1 to show training.
+            )
+
+            # Evaluate on validation set.
+            val_loss, val_acc = model.evaluate(pointsVal, pointLabelsVal, verbose=0)
+
+            # Store tested hyperparameters and results.
+            testedLayers.append(layers)
+            testedUnits.append(units)
+            testedRates.append(lr)
+            testedLosses.append(val_loss)
+            testedAccuracies.append(val_acc)
+
+            print(f"Validation loss: {val_loss:.4f}, Validation accuracy: {val_acc:.4f}")
+
+            # Update optimal model if this is better.
+            if val_loss < lossOpt:
+                lossOpt = val_loss
+                accOpt = val_acc
+                layersOpt = layers
+                unitsOpt = units
+                modelOpt = model
+                print(" -> New best model found.")
+
+print("\nOptimal configuration:")
+print(f"Layers: {layersOpt}, Units: {unitsOpt}, "
+      f"Validation loss: {lossOpt:.4f}, Validation accuracy: {accOpt:.4f}")
+
+# Convert tracking lists to numpy arrays (so they can be saved).
+testedLayers = np.array(testedLayers)
+testedUnits = np.array(testedUnits)
+testedRates = np.array(testedRates)
+testedLosses = np.array(testedLosses)
+testedAccuracies = np.array(testedAccuracies)
+
+# Save the best model and arrays so they can be reused without retraining.
+modelOpt.save('modelOpt.keras')
+np.savez('arrays.npz',
+         testedLayers=testedLayers,
+         testedUnits=testedUnits,
+         testedRates=testedRates,
+         testedLosses=testedLosses,
+         testedAccuracies=testedAccuracies)
+
+
+# Cell 3
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
+# Evaluate modelOpt (trained model) on the test set.
+lossTest, accTest = modelOpt.evaluate(pointsTest, pointLabelsTest, verbose=0)
+print(f"Test accuracy: {accTest:.4f}")
+print(f"Test loss: {lossTest:.4f}")
+
+# Predict labels for the test set.
+predictions = modelOpt.predict(pointsTest)
+predicted_labels = np.argmax(predictions, axis=1)
+
+# Create confusion matrix.
+pointsConfusionMatrix = confusion_matrix(pointLabelsTest, predicted_labels)
+pointsConfusionMatrixPlot = ConfusionMatrixDisplay(
+    confusion_matrix=pointsConfusionMatrix,
+    display_labels=np.unique(pointLabelsTest)
+)
+
+# Plot confusion matrix.
+fig, ax = plt.subplots(figsize=(6, 6))
+pointsConfusionMatrixPlot.plot(ax=ax, cmap='Blues', colorbar=False)
+plt.title('Confusion Matrix for Points Classification')
+plt.show()
+
+
+# Cell 4
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Create contour plot of decision boundary for trained modelOpt.
+# Define a grid over the range of the data.
+x_min, x_max = points[:, 0].min() - 0.5, points[:, 0].max() + 0.5
+y_min, y_max = points[:, 1].min() - 0.5, points[:, 1].max() + 0.5
+
+xx, yy = np.meshgrid(
+    np.linspace(x_min, x_max, 300),
+    np.linspace(y_min, y_max, 300)
+)
+
+# Flatten grid so it can be fed into the model.
+grid_points = np.c_[xx.ravel(), yy.ravel()]
+
+# Get prediction probabilities and class predictions.
+Z_prob = modelOpt.predict(grid_points, verbose=0)
+Z = np.argmax(Z_prob, axis=1)
+Z = Z.reshape(xx.shape)
+
+# Plot decision boundary.
+plt.figure(figsize=(8, 6))
+plt.contourf(xx, yy, Z, alpha=0.3, cmap='viridis')
+
+# Overlay original points.
+for label in np.unique(pointLabels):
+    indices = (pointLabels == label)
+    plt.scatter(points[indices, 0], points[indices, 1],
+                label=f'Class {int(label)}', edgecolor='k', s=25)
+
+plt.xlabel('X-Axis')
+plt.ylabel('Y-Axis')
+plt.title('Decision Boundary of Trained Neural Network')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+# Cell 5
+# !pip install opencv-python
+# please run this if opencv-python is not installed
+
+import os
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Function to load & process images from a folder.
+def load_images_from_folder(folder_path, label):
+    images = []
+    labels = []
+    # iterate through images in folder path.
+    for filename in os.listdir(folder_path):
+        img_path = os.path.join(folder_path, filename)
+        img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)  # read image as greyscale.
+        if img is not None:
+            img = cv2.resize(img, (150, 150))  # resize images to 150x150 pixels.
+            images.append(img)
+            labels.append(label)  # append label to images.
+    return images, labels
+
+
+# Paths to training and testing folders (update the paths if needed).
+train_def_folder = os.path.join('casting_data', 'train', 'def_front')
+train_ok_folder = os.path.join('casting_data', 'train', 'ok_front')
+test_def_folder = os.path.join('casting_data', 'test', 'def_front')
+test_ok_folder = os.path.join('casting_data', 'test', 'ok_front')
+
+# Load training images + labels.
+train_def_imgs, train_def_labels = load_images_from_folder(train_def_folder, 0)  # label 0 = defective.
+train_ok_imgs, train_ok_labels = load_images_from_folder(train_ok_folder, 1)     # label 1 = okay.
+
+# Combine lists and convert to numpy arrays.
+imagesTrain = np.array(train_def_imgs + train_ok_imgs)
+imageLabelsTrain = np.array(train_def_labels + train_ok_labels)
+
+# Load testing images + labels.
+test_def_imgs, test_def_labels = load_images_from_folder(test_def_folder, 0)
+test_ok_imgs, test_ok_labels = load_images_from_folder(test_ok_folder, 1)
+
+# Combine lists and convert to numpy arrays.
+imagesTest = np.array(test_def_imgs + test_ok_imgs)
+imageLabelsTest = np.array(test_def_labels + test_ok_labels)
+
+# Plot one example image from training set and one from testing set. (two subplots)
+plt.figure(figsize=(8, 4))
+
+plt.subplot(1, 2, 1)
+plt.imshow(imagesTrain[0], cmap='gray')
+plt.title(f'Train Image - Label {imageLabelsTrain[0]}')
+plt.axis('off')
+
+plt.subplot(1, 2, 2)
+plt.imshow(imagesTest[0], cmap='gray')
+plt.title(f'Test Image - Label {imageLabelsTest[0]}')
+plt.axis('off')
+
+plt.tight_layout()
+plt.show()
+
+
+# Cell 6
+from sklearn.model_selection import train_test_split
+
+# normalise images to 0-1 RANGE.
+imagesTrain = imagesTrain / 255.0
+imagesTest = imagesTest / 255.0
+
+# split the training data into train and validation sets (80/20 split).
+imagesTrain, imagesVal, imageLabelsTrain, imageLabelsVal = train_test_split(
+    imagesTrain, imageLabelsTrain, test_size=0.2, random_state=69
+)
+
+# Verify shapes.
+print("Training images shape:", imagesTrain.shape)
+print("Validation images shape:", imagesVal.shape)
+print("Test images shape:", imagesTest.shape)
+
+
+# Cell 7
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Flatten
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping
+
+classes_value = len(np.unique(imageLabelsTrain))  # number of classes.
+
+# Hyperparameter choices for hidden layers and units.
+hidden_layers_options = [2, 4, 8]
+hidden_units_options = [64, 128]  # choose reasonable units to keep file size manageable.
+learning_rate = 1e-3
+
+# Track performance.
+best_val_loss = np.inf
+best_val_acc = 0.0
+best_layers = None
+best_units = None
+imageModelOpt = None
+
+# Early stopping callback for validation loss (5 epochs patience).
+early_stopping = EarlyStopping(
+    monitor='val_loss',
+    patience=5,
+    restore_best_weights=True
+)
+
+for layers in hidden_layers_options:
+    for units in hidden_units_options:
+        print(f"\nTraining MLP with {layers} hidden layers, {units} units each")
+
+        model = Sequential()
+        model.add(Flatten(input_shape=(150, 150)))  # flatten 2D image into a 1D vector.
+
+        # Add hidden layers.
+        for _ in range(layers):
+            model.add(Dense(units, activation='relu'))
+
+        # Output layer.
+        model.add(Dense(classes_value, activation='softmax'))
+
+        # Compile model.
+        optimizer = Adam(learning_rate=learning_rate)
+        model.compile(
+            optimizer=optimizer,
+            loss='sparse_categorical_crossentropy',
+            metrics=['accuracy']
+        )
+
+        # Train model.
+        history = model.fit(
+            imagesTrain, imageLabelsTrain,
+            validation_data=(imagesVal, imageLabelsVal),
+            epochs=100,
+            batch_size=32,
+            callbacks=[early_stopping],
+            verbose=0  # set 1 to see training progress.
+        )
+
+        # Evaluate model on validation set.
+        val_loss, val_acc = model.evaluate(imagesVal, imageLabelsVal, verbose=0)
+        print(f"Validation loss: {val_loss:.4f}, Validation accuracy: {val_acc:.4f}")
+
+        # Update best model if this one is better.
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            best_val_acc = val_acc
+            best_layers = layers
+            best_units = units
+            imageModelOpt = model
+            print(" -> New best image MLP model found.")
+
+print("\nBest MLP configuration:")
+print(f"Layers: {best_layers}, Units: {best_units}, "
+      f"Validation loss: {best_val_loss:.4f}, Validation accuracy: {best_val_acc:.4f}")
+
+# Save the best model.
+imageModelOpt.save('imageModelMLPOpt.keras')
+
+
+# Cell 8
+import tensorflow as tf
+
+# Load the optimal models if needed.
+# modelOpt = tf.keras.models.load_model('modelOpt.keras')
+# imageModelOpt = tf.keras.models.load_model('imageModelMLPOpt.keras')
+
+# Evaluate the trained MLP model on the test set.
+lossTest, accTest = imageModelOpt.evaluate(imagesTest, imageLabelsTest, verbose=0)
+print(f"Image MLP Test loss: {lossTest:.4f}")
+print(f"Image MLP Test accuracy: {accTest:.4f}")
+
+# Store test accuracy and loss in required variables.
+imageMLPAccTest = accTest
+imageMLPLossTest = lossTest
+
+
+# Cell 9
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping
+
+classes_value = len(np.unique(imageLabelsTrain))  # number of classes.
+
+# Reshape images for CNN input: (n_samples, 150, 150, 1).
+imagesTrain_cnn = imagesTrain.reshape(-1, 150, 150, 1)
+imagesVal_cnn = imagesVal.reshape(-1, 150, 150, 1)
+imagesTest_cnn = imagesTest.reshape(-1, 150, 150, 1)
+
+# Build CNN model.
+imageModelCNN = Sequential([
+    Input(shape=(150, 150, 1)),
+
+    Conv2D(32, (3, 3), activation='relu', padding='same'),
+    MaxPooling2D((2, 2)),
+
+    Conv2D(64, (3, 3), activation='relu', padding='same'),
+    MaxPooling2D((2, 2)),
+
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dropout(0.5),
+    Dense(classes_value, activation='softmax')
+])
+
+# Compile CNN model.
+optimizer = Adam(learning_rate=1e-3)
+imageModelCNN.compile(
+    optimizer=optimizer,
+    loss='sparse_categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+# Early stopping callback.
+early_stopping_cnn = EarlyStopping(
+    monitor='val_loss',
+    patience=5,
+    restore_best_weights=True
+)
+
+# Train CNN model.
+history_cnn = imageModelCNN.fit(
+    imagesTrain_cnn, imageLabelsTrain,
+    validation_data=(imagesVal_cnn, imageLabelsVal),
+    epochs=50,
+    batch_size=32,
+    callbacks=[early_stopping_cnn],
+    verbose=0  # set 1 for detailed output.
+)
+
+# Evaluate CNN on test set.
+imageCNNLossTest, imageCNNAccTest = imageModelCNN.evaluate(imagesTest_cnn, imageLabelsTest, verbose=0)
+print(f"Image CNN Test loss: {imageCNNLossTest:.4f}")
+print(f"Image CNN Test accuracy: {imageCNNAccTest:.4f}")
+
+# Save the trained CNN model.
+imageModelCNN.save('imageModelCNN.keras')
+
+
+# Cell 10
+import tensorflow as tf
+
+# Load the CNN model if needed.
+# imageModelCNN = tf.keras.models.load_model('imageModelCNN.keras')
+imageCNNLossTest, imageCNNAccTest = imageModelCNN.evaluate(imagesTest_cnn, imageLabelsTest, verbose=0)
+print("Test Loss:", imageCNNLossTest)
+print("Test Accuracy:", imageCNNAccTest)
+
+
+# Cell 11
+import tensorflow as tf
+import matplotlib.pyplot as plt
+
+# Choose an input image (or set of images) from the test set.
+# Here, select first 3 images.
+num_images = 3
+sample_images = imagesTest_cnn[:num_images]
+
+# Use the input from the first layer as the model input.
+model_input = imageModelCNN.layers[0].input
+
+# Extract all convolutional layers from imageModelCNN.
+conv_layers = [layer for layer in imageModelCNN.layers if isinstance(layer, tf.keras.layers.Conv2D)]
+layer_names = [layer.name for layer in conv_layers]
+
+# Create new model outputting activation of each convolutional layer.
+activation_model = tf.keras.models.Model(
+    inputs=model_input,
+    outputs=[layer.output for layer in conv_layers]
+)
+
+# Get activations for the sample images.
+activations = activation_model.predict(sample_images)
+
+# Plot activation maps for each convolutional layer and each image.
+for layer_name, act in zip(layer_names, activations):
+    # Number of filters in the layer.
+    num_filters = act.shape[-1]
+    # Decide how many filters to visualise (limit to 6 for clarity).
+    num_filters_to_show = min(num_filters, 6)
+
+    # Figure with one row per image, and columns per filter.
+    fig, axes = plt.subplots(num_images, num_filters_to_show,
+                             figsize=(2 * num_filters_to_show, 2 * num_images))
+    fig.suptitle(f'Activations from layer: {layer_name}', fontsize=17)
+
+    for i in range(num_images):
+        for j in range(num_filters_to_show):
+            ax = axes[i, j]
+            # Extract activation map for image i, filter j.
+            activation_map = act[i, :, :, j]
+            ax.imshow(activation_map, cmap='viridis')
+            ax.axis('off')
+            if i == 0:
+                ax.set_title(f'Filter {j+1}')
+        # Label each row with the image index.
+        axes[i, 0].set_ylabel(f'Image {i+1}')
+    plt.show()
