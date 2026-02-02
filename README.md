@@ -11,54 +11,54 @@ The code includes **two** main components:
 
 **1. Neural Network Classification of 2D Data**
 
---
+---
 
-Loading and visualisation of labelled 2D point data
+- Loading and visualisation of labelled 2D point data
 
-Train / validation / test splitting
+- Train / validation / test splitting
 
-Fully connected neural network (TensorFlow / Keras)
+- Fully connected neural network (TensorFlow / Keras)
 
-Manual hyperparameter grid search:
+- Manual hyperparameter grid search:
 
-Number of hidden layers
+- Number of hidden layers
 
-Number of hidden units
+- Number of hidden units
 
-Learning rate
+- Learning rate
 
-Early stopping with a minimum epoch constraint
+- Early stopping with a minimum epoch constraint
 
-Selection and saving of the optimal model (modelOpt)
+- Selection and saving of the optimal model (modelOpt)
 
-Test-set evaluation and confusion matrix
+- Test-set evaluation and confusion matrix
 
-Decision-boundary visualisation
+- Decision-boundary visualisation
 
---
+---
 
 **2. Casting Defect Image Classification**
 
---
+---
 
-Image loading using OpenCV (grayscale, resizing)
+- Image loading using OpenCV (grayscale, resizing)
 
-Dataset construction from industrial casting images
+- Dataset construction from industrial casting images
 
-Normalisation and dataset splitting
+- Normalisation and dataset splitting
 
-Feedforward MLP model for image classification
+- Feedforward MLP model for image classification
 
-Convolutional Neural Network (CNN) for improved performance
+- Convolutional Neural Network (CNN) for improved performance
 
-Early stopping and test-set evaluation
+- Early stopping and test-set evaluation
 
-Saving trained models
+- Saving trained models
 
-Visualisation of CNN feature maps (activation maps)
+- Visualisation of CNN feature maps (activation maps)
 
-Notes on Structure
+- Notes on Structure
 
-The script reflects the structure of a Jupyter notebook, not a modular Python package
+- The script reflects the structure of a Jupyter notebook, not a modular Python package
 
-Cells have been merged sequentially; some variables persist across sections
+- Cells have been merged sequentially; some variables persist across sections
